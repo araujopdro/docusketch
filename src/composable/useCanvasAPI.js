@@ -6,7 +6,7 @@ export function useCanvasAPI() {
    * @param {Object} dimensions - The calculated dimensions of the room
    * @param {number} sketchScale - The scale factor for sketching
    */
-  function sketchRoom(ctx, room, dimensions, sketchScale) {
+  function sketchRoom(ctx, room, dimensions, sketchScale, selectedWallId) {
     if (!ctx) {
       console.error('Invalid canvas context')
       return
@@ -28,7 +28,7 @@ export function useCanvasAPI() {
     }
 
     // Clear canvas
-    // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
     // Get corners
     const corners = room.corners
@@ -54,21 +54,29 @@ export function useCanvasAPI() {
 
       currentCorner.wallStarts.forEach(wall => {
         const endCorner = corners.find(c => c.wallEnds.some(w => w.id === wall.id))
-
         if (endCorner) {
           // End position
           const endX = offsetX + (endCorner.x * sketchScale)
           const endY = offsetY + (endCorner.y * sketchScale)
-
-          sketchWall(ctx, startX, startY, endX, endY)
-
-          // Calculate wall length
           const length = Math.sqrt(
             Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)
           )
 
-          // Add label to wall
-          sketchWallLabel(ctx, startX, startY, endX, endY, `${Math.round(length)}`)
+          if (selectedWallId && wall.id === selectedWallId) {
+            // Calculate wall length
+            sketchWallLabel(ctx, startX, startY, endX, endY, `${Math.round(length)}`, 'red')
+            // Highlight selected wall
+            sketchWall(ctx, startX, startY, endX, endY, 'red')
+
+            drawPerpendicularFromMidpoint(ctx, startX, startY, endX, endY, 50)
+
+
+          } else {
+            // Regular wall
+            sketchWall(ctx, startX, startY, endX, endY)
+            // Add label to wall
+            sketchWallLabel(ctx, startX, startY, endX, endY, `${Math.round(length)}`)
+          }
 
           console.log(`Wall ${wall.id}: (${Math.round(startX)}, ${Math.round(startY)}) → (${Math.round(endX)}, ${Math.round(endY)})`)
         }
@@ -86,7 +94,7 @@ export function useCanvasAPI() {
    * @param {number} endX - The ending x-coordinate
    * @param {number} endY - The ending y-coordinate
    */
-  function sketchWall(ctx, startX, startY, endX, endY) {
+  function sketchWall(ctx, startX, startY, endX, endY, color = 'black') {
     if (!ctx) {
       console.error('Invalid canvas context')
       return
@@ -95,6 +103,7 @@ export function useCanvasAPI() {
     ctx.beginPath()
     ctx.moveTo(startX, startY)
     ctx.lineTo(endX, endY)
+    ctx.strokeStyle = color
     ctx.stroke()
   }
 
@@ -117,7 +126,7 @@ export function useCanvasAPI() {
     ctx.fill()
   }
 
-  function sketchWallLabel(ctx, startX, startY, endX, endY, text) {
+  function sketchWallLabel(ctx, startX, startY, endX, endY, text, color = 'black') {
     if (!ctx) {
       console.error('Invalid canvas context')
       return
@@ -146,7 +155,7 @@ export function useCanvasAPI() {
 
     // Draw text
     ctx.font = '12px Arial'
-    ctx.fillStyle = 'black'
+    ctx.fillStyle = color
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'  // Position above the line
     ctx.fillText(text, 0, -5)  // 5px above the line
@@ -183,7 +192,7 @@ export function useCanvasAPI() {
       console.error('Invalid sketch scale, using default scale of 1')
       sketchScale = 1
     }
-    
+
     // Get corners
     const corners = room.corners
 
@@ -220,6 +229,5 @@ export function useCanvasAPI() {
 
   return {
     sketchRoom,
-    sketchPerpendiculars
   }
 }
