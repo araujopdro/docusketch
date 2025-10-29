@@ -27,3 +27,6 @@ dist-ssr
 ../.vscode/
 .DS_Store
 .vscode/
+.DS_Store
+./.DS_Store
+.DS_Store

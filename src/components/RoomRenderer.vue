@@ -30,6 +30,16 @@ const { sketchRoom } = useCanvasAPI()
 
 onMounted(() => {
   ctx = canvasRef.value.getContext('2d')
+  if (!ctx) {
+    roomSketcherStore.setError('Failed to get canvas context.')
+    return
+  }
+
+  if (!roomSketcherStore.roomData) {
+    roomSketcherStore.setError('No room data available for rendering.')
+    return
+  }
+  
   sketchRoom(ctx, roomSketcherStore.roomData, roomSketcherStore.roomCalculatedDimensions, sketchScale, roomSketcherStore.selectedWall.id)
 })
 

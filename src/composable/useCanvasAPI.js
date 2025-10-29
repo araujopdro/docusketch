@@ -64,18 +64,20 @@ export function useCanvasAPI() {
 
           if (selectedWallId && wall.id === selectedWallId) {
             // Calculate wall length
-            sketchWallLabel(ctx, startX, startY, endX, endY, `${Math.round(length)}`, 'red')
             // Highlight selected wall
             sketchWall(ctx, startX, startY, endX, endY, 'red')
 
-            drawPerpendicularFromMidpoint(ctx, startX, startY, endX, endY, 50)
+            // Draw parallel line outside the shape
+            drawParallelLine(ctx, startX, startY, endX, endY, 50, 'red')
 
-
+            // Draw perpendicular
+            drawPerpendicularLine(ctx, startX, startY, endX, endY, length, 'blue')
           } else {
             // Regular wall
             sketchWall(ctx, startX, startY, endX, endY)
+
             // Add label to wall
-            sketchWallLabel(ctx, startX, startY, endX, endY, `${Math.round(length)}`)
+            sketchLabel(ctx, startX, startY, endX, endY, `Length ${Math.round(length)}`, 'black', '8px');
           }
 
           console.log(`Wall ${wall.id}: (${Math.round(startX)}, ${Math.round(startY)}) → (${Math.round(endX)}, ${Math.round(endY)})`)
@@ -120,29 +122,27 @@ export function useCanvasAPI() {
       return
     }
 
+    ctx.save()
     ctx.beginPath()
     ctx.arc(x, y, radius, 0, Math.PI * 2)
     ctx.fillStyle = color
     ctx.fill()
+    ctx.restore()
   }
 
-  function sketchWallLabel(ctx, startX, startY, endX, endY, text, color = 'black') {
+  function sketchLabel(ctx, startX, startY, endX, endY, text, color = 'black', fontSize = '12px') {
     if (!ctx) {
       console.error('Invalid canvas context')
       return
     }
 
-    // Calculate midpoint
     const midX = (startX + endX) / 2
     const midY = (startY + endY) / 2
 
-    // Calculate angle of the wall
     const angle = Math.atan2(endY - startY, endX - startX)
 
     // Save the current context state
     ctx.save()
-
-    // Move to midpoint
     ctx.translate(midX, midY)
 
     // Rotate to align with wall
@@ -154,79 +154,137 @@ export function useCanvasAPI() {
     ctx.rotate(rotation)
 
     // Draw text
-    ctx.font = '12px Arial'
+    ctx.font = `${fontSize} Arial`
     ctx.fillStyle = color
     ctx.textAlign = 'center'
-    ctx.textBaseline = 'bottom'  // Position above the line
-    ctx.fillText(text, 0, -5)  // 5px above the line
+    ctx.textBaseline = 'bottom'
+    ctx.fillText(text, 0, -5)
 
-    // Restore context
     ctx.restore()
   }
 
-  /**
-   * Sketch perpendicular lines from a room corner
-   * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
-   * @param {Object} room - The room data containing corners and walls
-   * @param {Object} dimensions - The calculated dimensions of the room
-   * @param {Object} corner - The corner from which to sketch perpendiculars
-   * @param {number} sketchScale - The scale factor for sketching
-   */
-  function sketchPerpendiculars(ctx, room, dimensions, sketchScale) {
+  function drawParallelLine(ctx, startX, startY, endX, endY, distance, color) {
     if (!ctx) {
       console.error('Invalid canvas context')
       return
     }
 
-    if (!room) {
-      console.error('No room data provided')
-      return
-    }
+    // Wall direction vector
+    const dx = endX - startX
+    const dy = endY - startY
+    const wallLength = Math.sqrt(dx * dx + dy * dy)
 
-    if (!dimensions) {
-      console.error('No room dimensions provided')
-      return
-    }
+    const dirX = dx / wallLength
+    const dirY = dy / wallLength
 
-    if (!sketchScale || sketchScale <= 0) {
-      console.error('Invalid sketch scale, using default scale of 1')
-      sketchScale = 1
-    }
+    // Perpendicular
+    const perpX = -dirY
+    const perpY = dirX
 
-    // Get corners
-    const corners = room.corners
+    // Determine outward direction
+    const outwardX = perpX
+    const outwardY = perpY
 
-    // Center of canvas
-    const canvasCenterX = ctx.canvas.width / 2
-    const canvasCenterY = ctx.canvas.height / 2
+    // Parallel line coordinates
+    const parallelStartX = startX + outwardX * distance
+    const parallelStartY = startY + outwardY * distance
+    const parallelEndX = endX + outwardX * distance
+    const parallelEndY = endY + outwardY * distance
 
-    // Center of room
-    const offsetX = canvasCenterX - (dimensions.centerX * sketchScale)
-    const offsetY = canvasCenterY - (dimensions.centerY * sketchScale)
+    // Parallel line
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(parallelStartX, parallelStartY)
+    ctx.lineTo(parallelEndX, parallelEndY)
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2
+    ctx.setLineDash([5, 5])
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
 
-    const xs = corners.map(c => c.x)
-    const ys = corners.map(c => c.y)
-    const minX = Math.min(...xs)
-    const maxX = Math.max(...xs)
-    const minY = Math.min(...ys)
-    const maxY = Math.max(...ys)
+    // Connecting lines
+    ctx.save()
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(parallelStartX, parallelStartY)
+    ctx.stroke()
 
-    const boundingBoxCorners = {
-      topLeft: { x: minX, y: minY },
-      topRight: { x: maxX, y: minY },
-      bottomLeft: { x: minX, y: maxY },
-      bottomRight: { x: maxX, y: maxY },
-    }
+    ctx.beginPath()
+    ctx.moveTo(endX, endY)
+    ctx.lineTo(parallelEndX, parallelEndY)
+    ctx.stroke()
+    ctx.restore()
 
-    // Draw a dot for each bounding box corner
-    for (const key in boundingBoxCorners) {
-      const corner = boundingBoxCorners[key]
-      const canvasX = (corner.x * sketchScale) + offsetX
-      const canvasY = (corner.y * sketchScale) + offsetY
-      sketchDot(ctx, canvasX, canvasY, 'blue', 2)
-    }
+    sketchLabel(ctx, parallelStartX, parallelStartY, parallelEndX, parallelEndY,
+      `Length: ${Math.round(wallLength)}`, color)
+
+    sketchDot(ctx, parallelStartX, parallelStartY, color, 3)
+    sketchDot(ctx, parallelEndX, parallelEndY, color, 3)
   }
 
+  function drawPerpendicularLine(ctx, startX, startY, endX, endY, length, color) {
+    if (!ctx) {
+      console.error('Invalid canvas context')
+      return
+    }
+    
+    // placeholder
+    length = 100  
+
+    // Calculate midpoint
+    const midX = (startX + endX) / 2
+    const midY = (startY + endY) / 2
+
+    sketchDot(ctx, midX, midY, color, 3)
+
+    // Wall direction vector
+    const dx = endX - startX
+    const dy = endY - startY
+    const wallLength = Math.sqrt(dx * dx + dy * dy)
+
+    // Normalize
+    const dirX = dx / wallLength
+    const dirY = dy / wallLength
+
+    // Perpendicular
+    const perpX = -dirY
+    const perpY = dirX
+
+    // Determine inside direction
+    const inwardX = -perpX
+    const inwardY = -perpY
+
+
+
+
+
+
+    // Perpendicular line coordinates
+    const perpEndX = midX + inwardX * length
+    const perpEndY = midY + inwardY * length
+
+    // Perpendicular line
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(midX, midY)
+    ctx.lineTo(perpEndX, perpEndY)
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2
+    ctx.setLineDash([5, 5])
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+
+    // Label
+    sketchLabel(ctx, midX, midY, perpEndX, perpEndY,
+      `Perpendicular`, color)
+
+    sketchDot(ctx, perpEndX, perpEndY, color, 3)
+  }
+  
   return {
     sketchRoom,
   }
