@@ -15,13 +15,7 @@ interview task: room dimension visualization tool.
 - Vite (Build Tool)
 
 ## Setup
-\`\`\`bash
+\`\`\`
 npm install
 npm run dev
 \`\`\`
-
-## Key Concepts Demonstrated
-- Vector mathematics (dot product, projections)
-- Coordinate transformations (scaling, offsetting)
-- Canvas API rendering
-- Vue 3 reactivity and state management
