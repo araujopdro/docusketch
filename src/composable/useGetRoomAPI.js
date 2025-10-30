@@ -1,31 +1,34 @@
 import { useRoomSketcherStore } from '../stores/useRoomSketcherStore'
 
-export async function loadRoom(roomFileUrl = null) {
+export async function loadRoom(roomIndex = null) {
   const roomSketcherStore = useRoomSketcherStore()
   try {
-    roomSketcherStore.setLoading(true)
+    roomSketcherStore.setLoading("Loading room data...")
     roomSketcherStore.clearError()
 
     //wait a few seconds for dramatic effect
-    await new Promise(resolve => setTimeout(resolve, 1200))
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
-    //const roomUrls = ['/simple.json', '/t_shape.json', '/triangle.json', '/no_room_data.json']
-    const roomUrls = ['/simple.json', '/t_shape.json', '/triangle.json']
-    const response = await fetch(roomUrls[Math.floor(Math.random() * roomUrls.length)])
-
-    let roomData
-    try {
-      roomData = await response.json()
-      if (!roomDataValidator(roomData)) {
-        roomSketcherStore.setError('Invalid room data format')
-        throw new Error('Invalid room data format')
-      }
-
-      return roomData
-    } catch (parseError) {
-      roomSketcherStore.setError('Failed to parse room data')
-      throw new Error('Failed to parse room data')
+    let selectedRoomUrl 
+    if (roomIndex !== null && roomIndex >= 0 && roomIndex < roomSketcherStore.roomFiles.length) {
+      selectedRoomUrl = roomSketcherStore.roomFiles[roomIndex]
+    } else {
+      const roomFilesLength = roomSketcherStore.roomFiles.length
+      const randomIndex = Math.floor(Math.random() * (roomFilesLength - 1))
+      selectedRoomUrl = roomSketcherStore.roomFiles[randomIndex]
     }
+
+    const response = await fetch(selectedRoomUrl)
+
+    const roomData = await response.json()
+
+    // Validate room data structure
+    if (!roomDataValidator(roomData)) {
+      throw new Error('Invalid room data format')
+    }
+    
+    roomData.url = selectedRoomUrl
+    return roomData
   } catch (error) {
     console.error('Error loading room:', error)
     roomSketcherStore.setError('Failed to load room data')

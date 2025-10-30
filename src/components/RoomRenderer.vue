@@ -1,10 +1,6 @@
 <template>
   <div class="room-renderer">
-    <canvas 
-      ref="canvasRef" 
-      :width="canvasProps.width" 
-      :height="canvasProps.height"
-      >
+    <canvas ref="canvasRef" :width="canvasProps.width" :height="canvasProps.height">
     </canvas>
   </div>
 </template>
@@ -39,7 +35,7 @@ onMounted(() => {
     roomSketcherStore.setError('No room data available for rendering.')
     return
   }
-  
+
   sketchRoom(ctx, roomSketcherStore.roomData, roomSketcherStore.roomCalculatedDimensions, sketchScale, roomSketcherStore.selectedWall.id)
 })
 
@@ -53,10 +49,6 @@ watch(() => roomSketcherStore.selectedWall, (newWall) => {
 </script>
 
 <style scoped>
-.room-renderer {
-  padding: 20px;
-}
-
 canvas {
   background: white;
   display: block;
