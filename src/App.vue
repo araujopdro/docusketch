@@ -5,9 +5,12 @@
       <select v-model="roomSketcherStore.selectedRoomIndex" :disabled="roomSketcherStore.isLoading"
         @change="handleRoomLoading(roomSketcherStore.selectedRoomIndex)">
         <option v-for="(roomFile, index) in roomSketcherStore.roomFiles" :key="index" :value="index">
-          {{ roomFile }}
+          {{ roomFile.name }}
         </option>
       </select>
+      
+      <h4>Room Scale:</h4>
+      <input class="room-scale" type="number" v-model="roomSketcherStore.roomScale" :disabled="roomSketcherStore.isLoading" step="0.1" min="0.2" max="1.0" />
     </div>
     <div class="wall-selection">
       <div class="measurement-info" v-if="roomSketcherStore.selectedWall">
@@ -36,7 +39,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import RoomRenderer from './components/RoomRenderer.vue'
 
 import { useRoomSketcherStore } from './stores/useRoomSketcherStore.js'
@@ -45,8 +48,7 @@ import { CalculateRoomDimensions } from './utils/CalculateRoomDimensions.js'
 
 const roomSketcherStore = useRoomSketcherStore();
 
-const loadingDelay = 750
-const sketchScale = 0.5
+const loadingDelay = 550
 const canvasSize = {
   width: 800,
   height: 600
@@ -61,12 +63,13 @@ function handleRoomLoading(roomIndex = null) {
   roomSketcherStore.clearRoomData();
   loadRoom(roomIndex).then(async (data) => {
     roomSketcherStore.setRoomData(data)
-
-    roomSketcherStore.setLoading("Calculating room measurements...")
+    
+    roomSketcherStore.setLoading("Calculating room measurements... (dramatic effect)")
     await new Promise(resolve => setTimeout(resolve, loadingDelay))
+    
+    CalculateRoomDimensions(canvasSize, roomSketcherStore.roomData, roomSketcherStore.roomScale)
+    roomSketcherStore.roomDimensionsCalculated()
 
-    const calculatedDimensions = CalculateRoomDimensions(canvasSize, roomSketcherStore.roomData, sketchScale)
-    roomSketcherStore.setRoomDimensions(calculatedDimensions)
     roomSketcherStore.setSelectedWall(roomSketcherStore.roomData.walls[0], 0)
   })
 }
@@ -119,6 +122,17 @@ function handleRoomLoading(roomIndex = null) {
 .room-selection select:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.room-scale {
+  width: 80px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .wall-selection {

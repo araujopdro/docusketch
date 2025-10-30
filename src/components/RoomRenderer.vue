@@ -8,6 +8,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoomSketcherStore } from '../stores/useRoomSketcherStore'
 import { useCanvasAPI } from '../composable/useCanvasAPI.js'
+import { CalculateRoomDimensions } from '../utils/CalculateRoomDimensions.js'
 
 const roomSketcherStore = useRoomSketcherStore()
 const { sketchRoom } = useCanvasAPI()
@@ -41,6 +42,14 @@ watch(() => roomSketcherStore.selectedWall, (newWall) => {
   if (ctx) {
     // Redraw room with new selected wall
     sketchRoom(ctx, roomSketcherStore.roomData, newWall.id)
+  }
+})
+
+watch(() => roomSketcherStore.roomScale, (newScale) => {
+  if (ctx) {
+    // Redraw room with new scale
+    CalculateRoomDimensions({width: ctx.canvas.width, height: ctx.canvas.height}, roomSketcherStore.roomData, newScale)
+    sketchRoom(ctx, roomSketcherStore.roomData, roomSketcherStore.selectedWall.id)
   }
 })
 

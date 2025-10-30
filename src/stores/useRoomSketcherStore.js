@@ -8,13 +8,15 @@ export const useRoomSketcherStore = defineStore('roomSketcher', {
   state: () => ({
     errorMessage: null,
     loadingMessage: null,
-    roomFiles: ['/simple.json', '/t_shape.json', '/triangle.json', '/no_room_data.json'],
+    roomFiles: [{name: 'Simple', url: './simple.json'}, {name: 'T-Shape', url: './t_shape.json'}, {name: 'Triangle', url: './triangle.json'}, {name: 'No Room Data', url: './no_room_data.json'}],
     roomData: null,
+    roomScale: 0.5,
     selectedRoomIndex: null,
     roomCalculatedDimensions: { width: 0, height: 0, centerX: 0, centerY: 0 },
     selectedWallIndex: null,
     selectedWall: { id: null },
   }),
+
   actions: {
     setError(errorMessage) {
       this.errorMessage = errorMessage
@@ -30,7 +32,7 @@ export const useRoomSketcherStore = defineStore('roomSketcher', {
     },
 
     setRoomData(data) {
-      this.selectedRoomIndex = this.roomFiles.indexOf(data.url)
+      this.selectedRoomIndex = this.roomFiles.findIndex(file => file.url === data.url)
       this.roomData = data
       this.errorMessage = null
       this.loadingMessage = null
@@ -58,8 +60,7 @@ export const useRoomSketcherStore = defineStore('roomSketcher', {
       this.selectedWall = this.roomData.walls[this.selectedWallIndex]
     },
 
-    setRoomDimensions(dimensions) {
-      this.roomCalculatedDimensions = dimensions
+    roomDimensionsCalculated() {
       this.loadingMessage = null
     },
   },

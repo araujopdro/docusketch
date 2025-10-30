@@ -10,7 +10,7 @@ const loadingDelay = 750
 export async function loadRoom(roomIndex = null) {
   const roomSketcherStore = useRoomSketcherStore()
   try {
-    roomSketcherStore.setLoading("Loading room data...")
+    roomSketcherStore.setLoading("Loading room data... (dramatic effect)")
     roomSketcherStore.clearError()
 
     //wait a few seconds for dramatic effect
@@ -18,12 +18,12 @@ export async function loadRoom(roomIndex = null) {
     
     let selectedRoomUrl 
     if (roomIndex !== null && roomIndex >= 0 && roomIndex < roomSketcherStore.roomFiles.length) {
-      selectedRoomUrl = roomSketcherStore.roomFiles[roomIndex]
+      selectedRoomUrl = roomSketcherStore.roomFiles[roomIndex].url
     } else {
       const roomFilesLength = roomSketcherStore.roomFiles.length
       // Select a random room file, not counting the last one, which is reserved for testing a broken file
       const randomIndex = Math.floor(Math.random() * (roomFilesLength - 1))
-      selectedRoomUrl = roomSketcherStore.roomFiles[randomIndex]
+      selectedRoomUrl = roomSketcherStore.roomFiles[randomIndex].url
     }
 
     const response = await fetch(selectedRoomUrl)
