@@ -1,28 +1,25 @@
 <template>
   <div class="room-renderer">
-    <canvas ref="canvasRef" :width="canvasProps.width" :height="canvasProps.height">
-    </canvas>
+    <canvas ref="canvasRef" :width="props.canvasWidth" :height="props.canvasHeight"></canvas>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-
 import { useRoomSketcherStore } from '../stores/useRoomSketcherStore'
-
 import { useCanvasAPI } from '../composable/useCanvasAPI.js'
 
-const canvasRef = ref(null)
-
-const sketchScale = 0.5
-const canvasProps = {
-  width: 800,
-  height: 600
-}
-
-let ctx = null
 const roomSketcherStore = useRoomSketcherStore()
 const { sketchRoom } = useCanvasAPI()
+
+// Declare props
+const props = defineProps({
+  canvasHeight: Number,
+  canvasWidth: Number
+})
+
+let ctx = null
+const canvasRef = ref(null)
 
 onMounted(() => {
   ctx = canvasRef.value.getContext('2d')
@@ -36,21 +33,22 @@ onMounted(() => {
     return
   }
 
-  sketchRoom(ctx, roomSketcherStore.roomData, roomSketcherStore.roomCalculatedDimensions, sketchScale, roomSketcherStore.selectedWall.id)
+  // Initial sketch
+  sketchRoom(ctx, roomSketcherStore.roomData, roomSketcherStore.selectedWall.id)
 })
 
 watch(() => roomSketcherStore.selectedWall, (newWall) => {
   if (ctx) {
     // Redraw room with new selected wall
-    sketchRoom(ctx, roomSketcherStore.roomData, roomSketcherStore.roomCalculatedDimensions, sketchScale, newWall.id)
+    sketchRoom(ctx, roomSketcherStore.roomData, newWall.id)
   }
-}, { deep: true })
+})
 
 </script>
 
 <style scoped>
 canvas {
-  background: white;
+  background: rgb(242, 242, 242);
   display: block;
   margin: 0 auto;
 }

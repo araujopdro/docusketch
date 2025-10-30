@@ -1,5 +1,9 @@
 import { defineStore } from 'pinia'
 
+/**
+ * Room Sketcher Store
+ * Manages the state and actions for the room sketching feature
+ */
 export const useRoomSketcherStore = defineStore('roomSketcher', {
   state: () => ({
     errorMessage: null,

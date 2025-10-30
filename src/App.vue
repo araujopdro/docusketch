@@ -2,7 +2,7 @@
   <section class="control-panel">
     <div class="room-selection">
       <h3>Room: </h3>
-      <select v-model="roomSketcherStore.selectedRoomIndex" :disabled="roomSketcherStore.loadingMessage"
+      <select v-model="roomSketcherStore.selectedRoomIndex" :disabled="roomSketcherStore.isLoading"
         @change="handleRoomLoading(roomSketcherStore.selectedRoomIndex)">
         <option v-for="(roomFile, index) in roomSketcherStore.roomFiles" :key="index" :value="index">
           {{ roomFile }}
@@ -10,12 +10,14 @@
       </select>
     </div>
     <div class="wall-selection">
-      <button 
-        id="wall-next-button" 
-        @click="roomSketcherStore.selectNextWall()"
-        :disabled="!roomSketcherStore.roomData || roomSketcherStore.loadingMessage"
-        >Select Next Wall</button>
-      <h5>Selected Wall: <strong>{{ roomSketcherStore.selectedWall.id }}</strong></h5>
+      <div class="measurement-info" v-if="roomSketcherStore.selectedWall">
+        <h5>Selected Wall: <strong>{{ roomSketcherStore.selectedWall.id }}</strong></h5>
+        <span>Length: <strong>{{ roomSketcherStore.selectedWall.length?.toFixed(1) }}</strong></span> - 
+        <span>Width: <strong>{{ roomSketcherStore.selectedWall.perpendicularLength?.toFixed(1) }}</strong></span>
+      </div>
+
+      <button id="wall-next-button" @click="roomSketcherStore.selectNextWall()"
+        :disabled="!roomSketcherStore.roomData || roomSketcherStore.isLoading">Select Next Wall</button>
     </div>
   </section>
 
@@ -24,10 +26,11 @@
       {{ roomSketcherStore.errorMessage }}
     </div>
 
-    <div v-if="roomSketcherStore.loadingMessage" class="loading-message">
+    <div v-if="roomSketcherStore.isLoading" class="loading-message">
       {{ roomSketcherStore.loadingMessage }}
     </div>
-    <RoomRenderer v-else-if="!roomSketcherStore.loadingMessage && roomSketcherStore.roomData" />
+    <RoomRenderer v-else-if="!roomSketcherStore.isLoading && roomSketcherStore.roomData" :canvasWidth="canvasSize.width"
+      :canvasHeight="canvasSize.height" />
   </section>
 
 </template>
@@ -42,6 +45,13 @@ import { CalculateRoomDimensions } from './utils/CalculateRoomDimensions.js'
 
 const roomSketcherStore = useRoomSketcherStore();
 
+const loadingDelay = 750
+const sketchScale = 0.5
+const canvasSize = {
+  width: 800,
+  height: 600
+}
+
 onMounted(() => {
   roomSketcherStore.clearError();
   handleRoomLoading();
@@ -50,21 +60,16 @@ onMounted(() => {
 function handleRoomLoading(roomIndex = null) {
   roomSketcherStore.clearRoomData();
   loadRoom(roomIndex).then(async (data) => {
-    console.log('Room data loaded:', data)
     roomSketcherStore.setRoomData(data)
 
     roomSketcherStore.setLoading("Calculating room measurements...")
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, loadingDelay))
 
-    const calculatedDimensions = CalculateRoomDimensions(roomSketcherStore.roomData)
+    const calculatedDimensions = CalculateRoomDimensions(canvasSize, roomSketcherStore.roomData, sketchScale)
     roomSketcherStore.setRoomDimensions(calculatedDimensions)
-    console.log('Calculated Room Dimensions:', calculatedDimensions)
-
     roomSketcherStore.setSelectedWall(roomSketcherStore.roomData.walls[0], 0)
   })
 }
-
-
 </script>
 
 <style scoped>
@@ -118,8 +123,9 @@ function handleRoomLoading(roomIndex = null) {
 
 .wall-selection {
   display: flex;
-  align-items: center;
-  gap: 15px;
+  flex-direction: column;
+  align-items: start;
+  gap: 10px;
 }
 
 .wall-selection button {
@@ -149,9 +155,16 @@ function handleRoomLoading(roomIndex = null) {
   background: #005a9e;
 }
 
-.wall-selection h5 {
+.measurement-info h5 {
   margin: 0;
   font-size: 14px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.measurement-info span {
+  margin: 0;
+  font-size: 11px;
   font-weight: 400;
   opacity: 0.8;
 }
@@ -162,7 +175,8 @@ function handleRoomLoading(roomIndex = null) {
   color: #007acc;
 }
 
-.control-panel, .room-display {
+.control-panel,
+.room-display {
   width: 100%;
   background-color: rgba(255, 255, 255, 0.1);
   padding: 20px;
