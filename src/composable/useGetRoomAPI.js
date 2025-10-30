@@ -1,6 +1,6 @@
 import { useRoomSketcherStore } from '../stores/useRoomSketcherStore'
 
-export async function loadRoom() {
+export async function loadRoom(roomFileUrl = null) {
   const roomSketcherStore = useRoomSketcherStore()
   try {
     roomSketcherStore.setLoading(true)
@@ -8,7 +8,7 @@ export async function loadRoom() {
 
     //wait a few seconds for dramatic effect
     await new Promise(resolve => setTimeout(resolve, 1200))
-
+    
     //const roomUrls = ['/simple.json', '/t_shape.json', '/triangle.json', '/no_room_data.json']
     const roomUrls = ['/simple.json', '/t_shape.json', '/triangle.json']
     const response = await fetch(roomUrls[Math.floor(Math.random() * roomUrls.length)])

@@ -38,26 +38,29 @@ export function useCanvasAPI() {
     const canvasCenterY = ctx.canvas.height / 2
     sketchDot(ctx, canvasCenterX, canvasCenterY, 'green')
 
-    // Center of room
-    const offsetX = canvasCenterX - (dimensions.centerX * sketchScale)
-    const offsetY = canvasCenterY - (dimensions.centerY * sketchScale)
-    console.log('offsetX', offsetX, 'offsetY', offsetY)
+    // Offset to center the sketch
+    const sketchOffset = {
+      x: canvasCenterX - (dimensions.centerX * sketchScale), 
+      y: canvasCenterY - (dimensions.centerY * sketchScale)
+    }
+
+    console.log('offset.x', sketchOffset.x, 'offset.y', sketchOffset.y)
 
     for (const corner of corners) {
-      const currentCorner = corner
-      console.log('currentCorner', currentCorner)
+      const startCorner = corner
+      console.log('startCorner', startCorner)
       // Move to corner position
-      const startX = offsetX + (currentCorner.x * sketchScale)
-      const startY = offsetY + (currentCorner.y * sketchScale)
+      const startX = sketchOffset.x + (startCorner.x * sketchScale)
+      const startY = sketchOffset.y + (startCorner.y * sketchScale)
 
       ctx.moveTo(startX, startY)
 
-      currentCorner.wallStarts.forEach(wall => {
+      startCorner.wallStarts.forEach(wall => {
         const endCorner = corners.find(c => c.wallEnds.some(w => w.id === wall.id))
         if (endCorner) {
           // End position
-          const endX = offsetX + (endCorner.x * sketchScale)
-          const endY = offsetY + (endCorner.y * sketchScale)
+          const endX = sketchOffset.x + (endCorner.x * sketchScale)
+          const endY = sketchOffset.y + (endCorner.y * sketchScale)
           const length = Math.sqrt(
             Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)
           )
@@ -71,7 +74,7 @@ export function useCanvasAPI() {
             drawParallelLine(ctx, startX, startY, endX, endY, 50, 'red')
 
             // Draw perpendicular
-            drawPerpendicularLine(ctx, startX, startY, endX, endY, length, 'blue')
+            drawPerpendicularLine(ctx, startCorner, endCorner, corners, sketchOffset, sketchScale, 'blue')
           } else {
             // Regular wall
             sketchWall(ctx, startX, startY, endX, endY)
@@ -140,6 +143,7 @@ export function useCanvasAPI() {
     const midY = (startY + endY) / 2
 
     const angle = Math.atan2(endY - startY, endX - startX)
+    console.log('Label angle (radians):', angle)
 
     // Save the current context state
     ctx.save()
@@ -225,24 +229,15 @@ export function useCanvasAPI() {
     sketchDot(ctx, parallelEndX, parallelEndY, color, 3)
   }
 
-  function drawPerpendicularLine(ctx, startX, startY, endX, endY, length, color) {
+  function drawPerpendicularLine(ctx, startCorner, endCorner, corners, sketchOffset, sketchScale, color) {
     if (!ctx) {
       console.error('Invalid canvas context')
       return
     }
-    
-    // placeholder
-    length = 100  
-
-    // Calculate midpoint
-    const midX = (startX + endX) / 2
-    const midY = (startY + endY) / 2
-
-    sketchDot(ctx, midX, midY, color, 3)
 
     // Wall direction vector
-    const dx = endX - startX
-    const dy = endY - startY
+    const dx = endCorner.x - startCorner.x
+    const dy = endCorner.y - startCorner.y
     const wallLength = Math.sqrt(dx * dx + dy * dy)
 
     // Normalize
@@ -253,23 +248,44 @@ export function useCanvasAPI() {
     const perpX = -dirY
     const perpY = dirX
 
-    // Determine inside direction
-    const inwardX = -perpX
-    const inwardY = -perpY
+    // Reference point (start of the wall)
+    const refX = startCorner.x
+    const refY = startCorner.y
 
+    let minPerpLength = Infinity   // Start with very large number
+    let maxPerpLength = -Infinity  // Start with very small number
 
+    corners.forEach(corner => {
+      const vx = corner.x - refX  // How far right/left from reference
+      const vy = corner.y - refY  // How far up/down from reference
 
+      const perpProjection = vx * perpX + vy * perpY // Dot product to get length along perpendicular
 
+      minPerpLength = Math.min(minPerpLength, perpProjection)
+      maxPerpLength = Math.max(maxPerpLength, perpProjection)
+    })
 
+    const perpendicularLength = maxPerpLength - minPerpLength // Total length of perpendicular
 
-    // Perpendicular line coordinates
-    const perpEndX = midX + inwardX * length
-    const perpEndY = midY + inwardY * length
+    // Calculate midpoint
+    const midX = refX + dirX * (wallLength / 2)
+    const midY = refY + dirY * (wallLength / 2)
+
+    const perpStartOrigX = midX + perpX * minPerpLength
+    const perpStartOrigY = midY + perpY * minPerpLength
+
+    const perpEndOrigX = midX + perpX * maxPerpLength
+    const perpEndOrigY = midY + perpY * maxPerpLength
+
+    const perpStartX = sketchOffset.x + perpStartOrigX * sketchScale
+    const perpStartY = sketchOffset.y + perpStartOrigY * sketchScale
+    const perpEndX = sketchOffset.x + perpEndOrigX * sketchScale
+    const perpEndY = sketchOffset.y + perpEndOrigY * sketchScale
 
     // Perpendicular line
     ctx.save()
     ctx.beginPath()
-    ctx.moveTo(midX, midY)
+    ctx.moveTo(perpStartX, perpStartY)
     ctx.lineTo(perpEndX, perpEndY)
     ctx.strokeStyle = color
     ctx.lineWidth = 2
@@ -278,13 +294,15 @@ export function useCanvasAPI() {
     ctx.setLineDash([])
     ctx.restore()
 
-    // Label
-    sketchLabel(ctx, midX, midY, perpEndX, perpEndY,
-      `Perpendicular`, color)
-
-    sketchDot(ctx, perpEndX, perpEndY, color, 3)
+    // Draw endpoint dots
+    sketchDot(ctx, perpStartX, perpStartY, color, 4)
+    sketchDot(ctx, perpEndX, perpEndY, color, 4)
+    
+    // Add label
+    sketchLabel(ctx, perpStartX, perpStartY, perpEndX, perpEndY,
+      `Perpendicular Length: ${Math.round(perpendicularLength)}`, color, '12px')
   }
-  
+
   return {
     sketchRoom,
   }
